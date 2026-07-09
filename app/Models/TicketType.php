@@ -17,6 +17,9 @@ class TicketType extends Model
         'is_discount',
         'discount_label',
         'parent_type_id',
+        'qr_x',
+        'qr_y',
+        'qr_size',
     ];
 
     protected function casts(): array
@@ -24,6 +27,9 @@ class TicketType extends Model
         return [
             'price' => 'decimal:2',
             'is_discount' => 'boolean',
+            'qr_x' => 'decimal:2',
+            'qr_y' => 'decimal:2',
+            'qr_size' => 'decimal:2',
         ];
     }
 
