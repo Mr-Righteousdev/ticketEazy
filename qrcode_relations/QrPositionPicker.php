@@ -55,12 +55,16 @@ class QrPositionPicker extends Component
     public function getPreviewNaturalWidth(): int
     {
         $url = $this->getPreviewUrl();
-
-        if (! $url || ! preg_match('/\/previews\/([a-f0-9]+)\.png/', $url, $m)) {
+        if (! $url) {
             return 800;
         }
 
-        $size = @getimagesize(Storage::disk('local')->path("previews/{$m[1]}.png"));
+        $path = Storage::disk('local')->path($url);
+        if (! file_exists($path)) {
+            return 800;
+        }
+
+        $size = @getimagesize($path);
 
         return $size ? $size[0] : 800;
     }
@@ -68,12 +72,16 @@ class QrPositionPicker extends Component
     public function getPreviewNaturalHeight(): int
     {
         $url = $this->getPreviewUrl();
-
-        if (! $url || ! preg_match('/\/previews\/([a-f0-9]+)\.png/', $url, $m)) {
+        if (! $url) {
             return 600;
         }
 
-        $size = @getimagesize(Storage::disk('local')->path("previews/{$m[1]}.png"));
+        $path = Storage::disk('local')->path($url);
+        if (! file_exists($path)) {
+            return 600;
+        }
+
+        $size = @getimagesize($path);
 
         return $size ? $size[1] : 600;
     }

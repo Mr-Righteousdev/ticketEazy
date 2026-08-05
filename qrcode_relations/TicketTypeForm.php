@@ -35,12 +35,7 @@ class TicketTypeForm
                     ->label('PDF Template')
                     ->directory('templates')
                     ->acceptedFileTypes(['application/pdf'])
-                    ->live()
-                    ->afterStateUpdated(function ($set) {
-                        $set('qr_x', null);
-                        $set('qr_y', null);
-                        $set('qr_size', 30);
-                    }),
+                    ->live(),
                 Toggle::make('is_discount')
                     ->label('Discount ticket?')
                     ->inline(false),

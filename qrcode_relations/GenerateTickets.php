@@ -9,7 +9,6 @@ use chillerlan\QRCode\QRCode;
 use chillerlan\QRCode\QROptions;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use setasign\Fpdi\Fpdi;
 use ZipArchive;
@@ -21,7 +20,6 @@ class GenerateTickets implements ShouldQueue
     public function __construct(
         public TicketType $ticketType,
         public int $quantity,
-        public ?int $timestamp = null,
     ) {}
 
     public function handle(GenerateTicketToken $tokenGenerator): void
@@ -31,23 +29,16 @@ class GenerateTickets implements ShouldQueue
         $typeId = $ticketType->id;
         $quantity = min($this->quantity, $ticketType->quantity);
 
-        $timestamp = $this->timestamp ?? now()->timestamp;
+        $timestamp = now()->timestamp;
         $basePath = "tickets/{$eventId}/{$typeId}";
         $batchDir = "{$basePath}/batch-{$timestamp}";
-
-        $templatePath = $ticketType->template_path
-            ? Storage::disk('local')->path($ticketType->template_path)
-            : null;
-
-        if (! $templatePath || ! file_exists($templatePath)) {
-            Log::warning("Ticket generation skipped for ticket type {$typeId}: no PDF template found.");
-
-            return;
-        }
 
         Storage::makeDirectory($batchDir);
 
         $pdfPaths = [];
+        $templatePath = $ticketType->template_path
+            ? Storage::disk('local')->path($ticketType->template_path)
+            : null;
 
         $qrOptions = new QROptions([
             'outputType' => QRCode::OUTPUT_IMAGE_PNG,
@@ -55,25 +46,28 @@ class GenerateTickets implements ShouldQueue
             'scale' => 10,
         ]);
 
+        $qrCode = new QRCode($qrOptions);
+
         for ($i = 0; $i < $quantity; $i++) {
             $token = $tokenGenerator->generate($eventId);
 
             $ticket = Ticket::create([
                 'ticket_type_id' => $typeId,
                 'token' => $token,
-                'batch_path' => $batchDir,
                 'status' => 'generated',
             ]);
 
-            $pdfFilename = "ticket-{$ticket->id}.pdf";
-            $outputPath = Storage::disk('local')->path("{$batchDir}/{$pdfFilename}");
+            $shortToken = substr($token, 0, 12);
+            $pdfFilename = "ticket-{$shortToken}.pdf";
 
-            try {
-                $this->stampPdf(new QRCode($qrOptions), $ticket, $templatePath, $outputPath);
-                $pdfPaths[] = $outputPath;
-            } catch (\Throwable $e) {
-                $ticket->update(['status' => 'failed']);
-                Log::error("Ticket {$ticket->id} PDF generation failed: ".$e->getMessage());
+            if ($templatePath && file_exists($templatePath)) {
+                $this->stampPdf(
+                    $qrCode,
+                    $ticket,
+                    $templatePath,
+                    Storage::disk('local')->path("{$batchDir}/{$pdfFilename}"),
+                );
+                $pdfPaths[] = Storage::disk('local')->path("{$batchDir}/{$pdfFilename}");
             }
         }
 
@@ -88,8 +82,6 @@ class GenerateTickets implements ShouldQueue
                     $zip->addFile($path, basename($path));
                 }
                 $zip->close();
-
-                Log::info("Ticket batch ready for ticket type {$typeId}: {$zipFile}");
             }
         }
     }
@@ -97,7 +89,7 @@ class GenerateTickets implements ShouldQueue
     private function stampPdf(QRCode $qrCode, Ticket $ticket, string $templatePath, string $outputPath): void
     {
         $ticketType = $this->ticketType;
-        $qrImage = $qrCode->render(route('ticket.verify', $ticket->token));
+        $qrImage = $qrCode->render($ticket->token);
 
         $pdf = new Fpdi;
         $pageCount = $pdf->setSourceFile($templatePath);

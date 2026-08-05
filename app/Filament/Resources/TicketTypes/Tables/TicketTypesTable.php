@@ -16,6 +16,9 @@ class TicketTypesTable
     public static function configure(Table $table): Table
     {
         return $table
+            ->modifyQueryUsing(fn ($query) => $query->withCount([
+                'tickets as checked_in_count' => fn ($query) => $query->where('status', 'used'),
+            ]))
             ->columns([
                 TextColumn::make('event.name')
                     ->searchable(),
@@ -25,6 +28,10 @@ class TicketTypesTable
                     ->money()
                     ->sortable(),
                 TextColumn::make('quantity')
+                    ->numeric()
+                    ->sortable(),
+                TextColumn::make('checked_in_count')
+                    ->label('Checked In')
                     ->numeric()
                     ->sortable(),
                 IconColumn::make('is_discount')

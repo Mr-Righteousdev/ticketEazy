@@ -22,23 +22,22 @@ class EditTicket extends EditRecord
                 ->color('primary')
                 ->action(function () {
                     $ticket = $this->record;
-                    $shortToken = substr($ticket->token, 0, 12);
-                    $eventId = $ticket->ticketType->event_id;
-                    $typeId = $ticket->ticket_type_id;
 
-                    $pattern = Storage::disk('local')->path("tickets/{$eventId}/{$typeId}/batch-*/ticket-{$shortToken}.pdf");
-                    $matches = glob($pattern);
+                    $path = $ticket->batch_path
+                        ? Storage::disk('local')->path("{$ticket->batch_path}/ticket-{$ticket->id}.pdf")
+                        : null;
 
-                    if (empty($matches)) {
+                    if (! $path || ! file_exists($path)) {
                         Notification::make()
                             ->title('PDF not found')
                             ->body('The ticket PDF file could not be located in storage.')
                             ->danger()
                             ->send();
+
                         return;
                     }
 
-                    return response()->download($matches[0], "ticket-{$shortToken}.pdf");
+                    return response()->download($path, "ticket-{$ticket->id}.pdf");
                 }),
             DeleteAction::make(),
         ];

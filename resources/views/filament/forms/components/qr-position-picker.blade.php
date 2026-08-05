@@ -2,51 +2,64 @@
     $previewUrl = $getPreviewUrl();
     $pdfWidth = $getPdfWidth();
     $pdfHeight = $getPdfHeight();
-    $imgNaturalWidth = $getPreviewNaturalWidth();
-    $imgNaturalHeight = $getPreviewNaturalHeight();
 
-    $initialX = (float) ($record?->qr_x ?? 10);
-    $initialY = (float) ($record?->qr_y ?? 10);
-    $initialSize = (float) ($record?->qr_size ?? 25);
-    $hasPosition = $initialX > 0 || $initialY > 0;
+    $qrXComponent = $getContainer()->getComponent(fn ($component) => $component instanceof \Filament\Forms\Components\Field && $component->getName() === 'qr_x');
+    $qrYComponent = $getContainer()->getComponent(fn ($component) => $component instanceof \Filament\Forms\Components\Field && $component->getName() === 'qr_y');
+    $qrSizeComponent = $getContainer()->getComponent(fn ($component) => $component instanceof \Filament\Forms\Components\Field && $component->getName() === 'qr_size');
+
+    $qrXState = $qrXComponent?->getState();
+    $qrYState = $qrYComponent?->getState();
+
+    $initialX = (float) ($qrXState ?? 10);
+    $initialY = (float) ($qrYState ?? 10);
+    $initialSize = (float) ($qrSizeComponent?->getState() ?? 25);
 @endphp
 
 <div
+    wire:key="qr-picker-{{ md5($previewUrl ?? '') }}"
     x-data="{
         x: {{ $initialX }},
         y: {{ $initialY }},
         qrSize: {{ $initialSize }},
         pdfWidth: {{ $pdfWidth }},
         pdfHeight: {{ $pdfHeight }},
-        imgW: {{ $imgNaturalWidth }},
-        imgH: {{ $imgNaturalHeight }},
-        placed: {{ $hasPosition ? 'true' : 'false' }},
+        placed: true,
         flash: false,
 
         get sx() {
-            return this.imgW > 0 ? this.pdfWidth / this.imgW : 1;
+            const w = this.$refs.previewImg?.offsetWidth || 1;
+            return this.pdfWidth / w;
         },
 
         get sy() {
-            return this.imgH > 0 ? this.pdfHeight / this.imgH : 1;
+            const h = this.$refs.previewImg?.offsetHeight || 1;
+            return this.pdfHeight / h;
         },
 
         get boxStyle() {
-            const w = Math.max(this.qrSize / this.sx, 10);
-            const h = Math.max(this.qrSize / this.sy, 10);
+            const sx = this.sx;
+            const sy = this.sy;
+
+            if (! isFinite(sx) || sx <= 0 || ! isFinite(sy) || sy <= 0) {
+                return { display: 'none' };
+            }
+
+            const px = this.x / sx;
+            const py = this.y / sy;
+            const pw = this.qrSize / sx;
+            const ph = this.qrSize / sy;
             return {
-                left: (this.x / this.sx) + 'px',
-                top: (this.y / this.sy) + 'px',
-                width: w + 'px',
-                height: h + 'px',
+                left: px + 'px',
+                top: py + 'px',
+                width: Math.max(pw, 8) + 'px',
+                height: Math.max(ph, 8) + 'px',
             };
         },
 
         placeQr(event) {
-            const rect = event.currentTarget.getBoundingClientRect();
+            const rect = this.$refs.previewImg.getBoundingClientRect();
             const clickX = event.clientX - rect.left;
             const clickY = event.clientY - rect.top;
-
             this.x = Math.round(clickX * this.sx * 10) / 10;
             this.y = Math.round(clickY * this.sy * 10) / 10;
             this.placed = true;
@@ -64,21 +77,19 @@
     class="space-y-4"
 >
     @if ($previewUrl)
-        <div class="border bg-gray-100" style="width: 100%; min-height: 200px; border-radius: 8px; overflow: hidden; text-align: center; padding: 16px;">
-            <div style="position: relative; display: inline-block; cursor: crosshair;">
+        <div class="border bg-gray-100 rounded-lg overflow-hidden text-center p-4">
+            <div style="position: relative; display: inline-block; cursor: crosshair; max-width: 100%;">
                 <img
                     x-ref="previewImg"
                     src="{{ $previewUrl }}"
-                    style="display: block;"
+                    style="display: block; max-width: 100%; height: auto;"
                     draggable="false"
                     @click="placeQr($event)"
-                    @@error="console.log('Preview load error', $event)"
                 >
-
                 <div
                     :class="{ 'opacity-0': !placed }"
                     :style="boxStyle"
-                    style="position: absolute; pointer-events: none; border: 2px solid #22c55e; background: rgba(34, 197, 94, 0.15); transition: opacity 0.2s;"
+                    style="position: absolute; pointer-events: none; border: 2px solid #22c55e; background: rgba(34, 197, 94, 0.15); transition: opacity 0.2s; box-sizing: border-box;"
                 ></div>
             </div>
         </div>
@@ -88,10 +99,14 @@
         </div>
     @endif
 
-    <div class="flex items-center gap-4 text-sm text-gray-600">
+    <div class="flex flex-wrap items-center gap-4 text-sm text-gray-600">
         <span x-text="'X: ' + Number(x).toFixed(1) + ' mm'"></span>
         <span x-text="'Y: ' + Number(y).toFixed(1) + ' mm'"></span>
-        <span x-text="'Size: ' + Number(qrSize).toFixed(1) + ' mm'"></span>
+        <div class="flex items-center gap-2">
+            <label class="text-gray-600">QR Size:</label>
+            <input type="range" x-model="qrSize" min="10" max="80" step="1" @input="syncToLivewire()" class="w-32 accent-emerald-500">
+            <span x-text="Number(qrSize).toFixed(0) + ' mm'" class="w-14"></span>
+        </div>
     </div>
 
     <div
