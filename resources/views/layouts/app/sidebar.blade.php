@@ -14,7 +14,7 @@
                 
                 <flux:sidebar.group :heading="__('Platform')" class="grid">
                     @hasrole('admin')
-                    <flux:sidebar.item icon="home" :href="route('admin.dashboard')" :current="request()->routeIs('admin.dashboard')" wire:navigate>
+                    <flux:sidebar.item icon="home" :href="route('filament.admin.pages.dashboard')" :current="request()->routeIs('filament.admin.pages.dashboard')" wire:navigate>
                         {{ __('Dashboard') }}
                     </flux:sidebar.item>
                     @endhasrole

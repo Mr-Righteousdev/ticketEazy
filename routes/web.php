@@ -8,6 +8,20 @@ use Illuminate\Support\Facades\Storage;
 
 Route::view('/', 'welcome')->name('home');
 
+Route::middleware(['auth'])->get('/dashboard', function () {
+    $user = auth()->user();
+
+    if ($user->hasRole('admin')) {
+        return redirect('/admin');
+    }
+
+    if ($user->hasRole('operator')) {
+        return redirect()->route('scan.dashboard');
+    }
+
+    return redirect()->route('home');
+})->name('dashboard');
+
 Route::get('/verify/{token}', function (string $token) {
     $ticket = Ticket::with('ticketType.event')
         ->where('token', $token)
