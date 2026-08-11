@@ -18,29 +18,47 @@ class CheckInTicket
      */
     public function handle(string $rawToken, int $eventId, User $operator, ?string $ipAddress = null, ?string $userAgent = null): array
     {
-        $token = $this->normalizeToken($rawToken);
+        $candidate = $this->normalizeToken($rawToken);
 
-        if (! $this->tokenVerifier->verify($token, $eventId)) {
+        if (GenerateTicketShortCode::isShortCode($candidate)) {
+            $ticket = Ticket::where('short_code', $candidate)
+                ->whereHas('ticketType', fn ($query) => $query->where('event_id', $eventId))
+                ->first();
+
+            return $this->processTicket($ticket, $operator, $ipAddress, $userAgent);
+        }
+
+        if (! $this->tokenVerifier->verify($candidate, $eventId)) {
             return ['status' => 'invalid'];
         }
 
-        return DB::transaction(function () use ($token, $operator, $ipAddress, $userAgent) {
-            $ticket = Ticket::where('token', $token)
+        $ticket = Ticket::where('token', $candidate)->first();
+
+        return $this->processTicket($ticket, $operator, $ipAddress, $userAgent);
+    }
+
+    /**
+     * @return array{status: 'ok'|'already_used'|'expired'|'invalid', ticket?: Ticket}
+     */
+    private function processTicket(?Ticket $ticket, User $operator, ?string $ipAddress = null, ?string $userAgent = null): array
+    {
+        if (! $ticket) {
+            return ['status' => 'invalid'];
+        }
+
+        return DB::transaction(function () use ($ticket, $operator, $ipAddress, $userAgent) {
+            $locked = Ticket::whereKey($ticket->id)
                 ->lockForUpdate()
                 ->first();
 
-            if (! $ticket) {
-                return ['status' => 'invalid'];
-            }
-
-            $result = match ($ticket->status) {
+            $result = match ($locked->status) {
                 'used' => 'already_used',
                 'failed', 'expired' => 'expired',
                 default => 'ok',
             };
 
             if ($result === 'ok') {
-                $ticket->update([
+                $locked->update([
                     'status' => 'used',
                     'used_at' => now(),
                     'scanned_by' => $operator->id,
@@ -48,7 +66,7 @@ class CheckInTicket
             }
 
             ScanLog::create([
-                'ticket_id' => $ticket->id,
+                'ticket_id' => $locked->id,
                 'scanned_by' => $operator->id,
                 'scanned_at' => now(),
                 'result' => $result,
@@ -58,14 +76,14 @@ class CheckInTicket
 
             return [
                 'status' => $result,
-                'ticket' => $ticket->load('ticketType.event'),
+                'ticket' => $locked->load('ticketType.event'),
             ];
         });
     }
 
     private function normalizeToken(string $rawToken): string
     {
-        if (preg_match('~/verify/([^/?#]+)~', $rawToken, $matches)) {
+        if (preg_match('~/(?:v|verify)/([^/?#]+)~', $rawToken, $matches)) {
             return $matches[1];
         }
 

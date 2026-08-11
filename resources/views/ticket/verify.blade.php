@@ -130,7 +130,7 @@
                             </div>
                             <div class="flex items-center justify-between gap-4">
                                 <dt class="text-zinc-500 dark:text-zinc-400">Ticket number</dt>
-                                <dd class="font-mono text-xs font-semibold text-zinc-900 dark:text-white">{{ substr($ticket->token, 0, 12) }}</dd>
+                                <dd class="font-mono text-xs font-semibold text-zinc-900 dark:text-white">{{ $ticket->short_code ?? substr($ticket->token, 0, 12) }}</dd>
                             </div>
                             <div class="flex items-center justify-between gap-4">
                                 <dt class="text-zinc-500 dark:text-zinc-400">Status</dt>

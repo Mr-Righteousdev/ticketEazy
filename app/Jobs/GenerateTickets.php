@@ -2,9 +2,11 @@
 
 namespace App\Jobs;
 
+use App\Actions\GenerateTicketShortCode;
 use App\Actions\GenerateTicketToken;
 use App\Models\Ticket;
 use App\Models\TicketType;
+use chillerlan\QRCode\Common\EccLevel;
 use chillerlan\QRCode\QRCode;
 use chillerlan\QRCode\QROptions;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -24,7 +26,7 @@ class GenerateTickets implements ShouldQueue
         public ?int $timestamp = null,
     ) {}
 
-    public function handle(GenerateTicketToken $tokenGenerator): void
+    public function handle(GenerateTicketToken $tokenGenerator, GenerateTicketShortCode $shortCodeGenerator): void
     {
         $ticketType = $this->ticketType;
         $eventId = $ticketType->event_id;
@@ -53,14 +55,17 @@ class GenerateTickets implements ShouldQueue
             'outputType' => QRCode::OUTPUT_IMAGE_PNG,
             'imageBase64' => false,
             'scale' => 10,
+            'eccLevel' => EccLevel::M,
         ]);
 
         for ($i = 0; $i < $quantity; $i++) {
             $token = $tokenGenerator->generate($eventId);
+            $shortCode = $shortCodeGenerator->generate();
 
             $ticket = Ticket::create([
                 'ticket_type_id' => $typeId,
                 'token' => $token,
+                'short_code' => $shortCode,
                 'batch_path' => $batchDir,
                 'status' => 'generated',
             ]);
@@ -97,7 +102,7 @@ class GenerateTickets implements ShouldQueue
     private function stampPdf(QRCode $qrCode, Ticket $ticket, string $templatePath, string $outputPath): void
     {
         $ticketType = $this->ticketType;
-        $qrImage = $qrCode->render(route('ticket.verify', $ticket->token));
+        $qrImage = $qrCode->render(route('ticket.quick-verify', $ticket->short_code));
 
         $pdf = new Fpdi;
         $pageCount = $pdf->setSourceFile($templatePath);

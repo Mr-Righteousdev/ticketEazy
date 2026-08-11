@@ -10,6 +10,7 @@ class Ticket extends Model
     protected $fillable = [
         'ticket_type_id',
         'token',
+        'short_code',
         'batch_path',
         'status',
         'used_at',

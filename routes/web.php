@@ -30,6 +30,14 @@ Route::get('/verify/{token}', function (string $token) {
     return view('ticket.verify', ['ticket' => $ticket]);
 })->name('ticket.verify');
 
+Route::get('/v/{code}', function (string $code) {
+    $ticket = Ticket::with('ticketType.event')
+        ->where('short_code', $code)
+        ->first();
+
+    return view('ticket.verify', ['ticket' => $ticket]);
+})->name('ticket.quick-verify');
+
 Route::middleware(['auth', 'verified', 'role:operator'])->group(function () {
     Route::get('/scan', ScanTicket::class)->name('scan.dashboard');
 });
