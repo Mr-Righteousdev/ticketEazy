@@ -11,7 +11,7 @@
     @if ($events->count() > 1)
         <div>
             <label for="event" class="mb-1 block text-sm font-medium text-zinc-500 dark:text-zinc-400">Event</label>
-            <select wire:model="eventId" id="event" class="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 focus:outline-none focus:ring-2 focus:ring-zinc-400 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100">
+            <select wire:model.live="eventId" id="event" class="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 focus:outline-none focus:ring-2 focus:ring-zinc-400 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100">
                 <option value="">-- Choose event --</option>
                 @foreach ($events as $event)
                     <option value="{{ $event->id }}">{{ $event->name }}</option>
