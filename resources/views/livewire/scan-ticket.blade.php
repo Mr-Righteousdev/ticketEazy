@@ -24,6 +24,17 @@
         <p class="text-center text-sm text-zinc-400">Select an event to start scanning.</p>
     @endif
 
+    @if ($assignedTicketTypeName && $eventId)
+        <div class="rounded-xl border-2 border-fuchsia-500 bg-fuchsia-500/10 px-4 py-3 text-center">
+            <div class="text-sm font-medium text-fuchsia-700 dark:text-fuchsia-300">
+                @if ($gateName)
+                    <span class="font-bold">{{ $gateName }}</span> &mdash;
+                @endif
+                Scanning: <span class="font-bold">{{ $assignedTicketTypeName }}</span> tickets only
+            </div>
+        </div>
+    @endif
+
     @if ($scanning && $eventId)
         <div id="qr-reader" class="overflow-hidden rounded-xl border border-zinc-200 bg-white dark:border-zinc-700"></div>
         <p class="text-center text-sm text-zinc-400">Point your camera at the ticket QR code.</p>
@@ -35,6 +46,7 @@
             'border-emerald-500 bg-emerald-500/10' => $result === 'ok',
             'border-amber-500 bg-amber-500/10' => $result === 'already_used',
             'border-red-500 bg-red-500/10' => $result === 'expired' || $result === 'invalid',
+            'border-fuchsia-500 bg-fuchsia-500/10' => $result === 'wrong_gate',
         ])>
             @if ($result === 'ok')
                 <div class="mx-auto flex size-16 items-center justify-center rounded-full bg-emerald-500 text-white">
@@ -49,6 +61,15 @@
                 @if ($usedAt)
                     <p class="text-sm text-zinc-500 dark:text-zinc-400">Checked in at {{ $usedAt }}</p>
                 @endif
+            @elseif ($result === 'wrong_gate')
+                <div class="mx-auto flex size-16 items-center justify-center rounded-full bg-fuchsia-500 text-white">
+                    <flux:icon.arrow-right-circle class="size-8" />
+                </div>
+                <div class="text-2xl font-bold text-fuchsia-600 dark:text-fuchsia-400">Wrong Gate</div>
+                <p class="text-sm text-zinc-600 dark:text-zinc-300">
+                    This ticket is for <span class="font-bold">{{ $expectedTypeName }}</span>.
+                    Please send to the correct gate.
+                </p>
             @elseif ($result === 'expired')
                 <div class="mx-auto flex size-16 items-center justify-center rounded-full bg-red-500 text-white">
                     <flux:icon.x-circle class="size-8" />

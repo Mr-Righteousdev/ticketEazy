@@ -3,6 +3,8 @@
 namespace Database\Seeders;
 
 use App\Models\Event;
+use App\Models\EventOperatorAssignment;
+use App\Models\TicketType;
 use App\Models\User;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
@@ -35,13 +37,41 @@ class DatabaseSeeder extends Seeder
         ]);
         $operator2->assignRole($operatorRole);
 
-        Event::create([
+        $event = Event::create([
             'name' => 'Grand Opening',
             'date' => now()->addMonth(),
             'time' => '18:00',
             'venue' => 'Novaspand Hall',
             'capacity' => 500,
             'status' => 'draft',
+        ]);
+
+        $ordinary = TicketType::create([
+            'event_id' => $event->id,
+            'name' => 'Ordinary',
+            'price' => 50.00,
+            'quantity' => 400,
+        ]);
+
+        $vip = TicketType::create([
+            'event_id' => $event->id,
+            'name' => 'VIP',
+            'price' => 150.00,
+            'quantity' => 100,
+        ]);
+
+        EventOperatorAssignment::create([
+            'event_id' => $event->id,
+            'user_id' => $operator1->id,
+            'ticket_type_id' => $ordinary->id,
+            'gate_name' => 'Gate 1',
+        ]);
+
+        EventOperatorAssignment::create([
+            'event_id' => $event->id,
+            'user_id' => $operator2->id,
+            'ticket_type_id' => $vip->id,
+            'gate_name' => 'VIP Entrance',
         ]);
     }
 }

@@ -39,6 +39,7 @@ class ScanLogsTable
                         'already_used' => 'Already Used',
                         'expired' => 'Expired',
                         'invalid' => 'Invalid',
+                        'wrong_gate' => 'Wrong Gate',
                         default => $state,
                     })
                     ->color(fn (string $state): string => match ($state) {
@@ -46,6 +47,7 @@ class ScanLogsTable
                         'already_used' => 'warning',
                         'expired' => 'danger',
                         'invalid' => 'danger',
+                        'wrong_gate' => 'danger',
                         default => 'gray',
                     }),
                 TextColumn::make('ip_address')
@@ -74,6 +76,7 @@ class ScanLogsTable
                         'already_used' => 'Already Used',
                         'expired' => 'Expired',
                         'invalid' => 'Invalid',
+                        'wrong_gate' => 'Wrong Gate',
                     ])
                     ->attribute('result'),
                 Filter::make('scanned_at')

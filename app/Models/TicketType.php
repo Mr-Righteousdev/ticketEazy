@@ -52,4 +52,9 @@ class TicketType extends Model
     {
         return $this->hasMany(TicketType::class, 'parent_type_id');
     }
+
+    public function operatorAssignments(): HasMany
+    {
+        return $this->hasMany(EventOperatorAssignment::class);
+    }
 }

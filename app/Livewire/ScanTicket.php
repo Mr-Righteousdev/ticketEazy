@@ -4,6 +4,7 @@ namespace App\Livewire;
 
 use App\Actions\CheckInTicket;
 use App\Models\Event;
+use App\Models\EventOperatorAssignment;
 use Illuminate\Contracts\View\View;
 use Livewire\Component;
 
@@ -23,12 +24,49 @@ class ScanTicket extends Component
 
     public string $manualToken = '';
 
+    public ?string $assignedTicketTypeName = null;
+
+    public ?string $gateName = null;
+
+    public bool $wrongGate = false;
+
+    public ?string $expectedTypeName = null;
+
     public function mount(): void
     {
         $events = Event::all();
 
         if ($events->count() === 1) {
             $this->eventId = $events->first()->id;
+            $this->loadAssignment();
+        }
+    }
+
+    public function updatedEventId(): void
+    {
+        $this->loadAssignment();
+    }
+
+    private function loadAssignment(): void
+    {
+        if (! $this->eventId) {
+            $this->assignedTicketTypeName = null;
+            $this->gateName = null;
+
+            return;
+        }
+
+        $assignment = EventOperatorAssignment::where('event_id', $this->eventId)
+            ->where('user_id', auth()->id())
+            ->with('ticketType')
+            ->first();
+
+        if ($assignment) {
+            $this->assignedTicketTypeName = $assignment->ticketType->name;
+            $this->gateName = $assignment->gate_name;
+        } else {
+            $this->assignedTicketTypeName = null;
+            $this->gateName = null;
         }
     }
 
@@ -49,6 +87,8 @@ class ScanTicket extends Component
         $ticket = $result['ticket'] ?? null;
 
         $this->result = $result['status'];
+        $this->wrongGate = $result['status'] === 'wrong_gate';
+        $this->expectedTypeName = $ticket?->ticketType?->name;
         $this->ticketTypeName = $ticket?->ticketType?->name;
         $this->eventName = $ticket?->ticketType?->event?->name;
         $this->usedAt = $ticket?->used_at?->format('H:i:s');
@@ -72,6 +112,8 @@ class ScanTicket extends Component
         $this->eventName = null;
         $this->usedAt = null;
         $this->scanning = true;
+        $this->wrongGate = false;
+        $this->expectedTypeName = null;
 
         $this->dispatch('scanner-reset');
     }

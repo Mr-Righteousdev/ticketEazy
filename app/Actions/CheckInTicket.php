@@ -2,6 +2,7 @@
 
 namespace App\Actions;
 
+use App\Models\EventOperatorAssignment;
 use App\Models\ScanLog;
 use App\Models\Ticket;
 use App\Models\User;
@@ -14,7 +15,7 @@ class CheckInTicket
     ) {}
 
     /**
-     * @return array{status: 'ok'|'already_used'|'expired'|'invalid', ticket?: Ticket}
+     * @return array{status: 'ok'|'already_used'|'expired'|'invalid'|'wrong_gate', ticket?: Ticket}
      */
     public function handle(string $rawToken, int $eventId, User $operator, ?string $ipAddress = null, ?string $userAgent = null): array
     {
@@ -25,7 +26,7 @@ class CheckInTicket
                 ->whereHas('ticketType', fn ($query) => $query->where('event_id', $eventId))
                 ->first();
 
-            return $this->processTicket($ticket, $operator, $ipAddress, $userAgent);
+            return $this->processTicket($ticket, $eventId, $operator, $ipAddress, $userAgent);
         }
 
         if (! $this->tokenVerifier->verify($candidate, $eventId)) {
@@ -34,16 +35,41 @@ class CheckInTicket
 
         $ticket = Ticket::where('token', $candidate)->first();
 
-        return $this->processTicket($ticket, $operator, $ipAddress, $userAgent);
+        return $this->processTicket($ticket, $eventId, $operator, $ipAddress, $userAgent);
     }
 
     /**
-     * @return array{status: 'ok'|'already_used'|'expired'|'invalid', ticket?: Ticket}
+     * @return array{status: 'ok'|'already_used'|'expired'|'invalid'|'wrong_gate', ticket?: Ticket}
      */
-    private function processTicket(?Ticket $ticket, User $operator, ?string $ipAddress = null, ?string $userAgent = null): array
+    private function processTicket(?Ticket $ticket, int $eventId, User $operator, ?string $ipAddress = null, ?string $userAgent = null): array
     {
         if (! $ticket) {
             return ['status' => 'invalid'];
+        }
+
+        // Check if operator is assigned to a different ticket type for this event
+        if (! $operator->hasRole('admin')) {
+            $assignment = EventOperatorAssignment::where('event_id', $eventId)
+                ->where('user_id', $operator->id)
+                ->first();
+
+            if ($assignment && $assignment->ticket_type_id !== $ticket->ticket_type_id) {
+                $ticket->load('ticketType');
+
+                ScanLog::create([
+                    'ticket_id' => $ticket->id,
+                    'scanned_by' => $operator->id,
+                    'scanned_at' => now(),
+                    'result' => 'wrong_gate',
+                    'ip_address' => $ipAddress,
+                    'user_agent' => $userAgent,
+                ]);
+
+                return [
+                    'status' => 'wrong_gate',
+                    'ticket' => $ticket,
+                ];
+            }
         }
 
         return DB::transaction(function () use ($ticket, $operator, $ipAddress, $userAgent) {

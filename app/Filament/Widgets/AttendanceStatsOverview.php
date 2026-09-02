@@ -28,6 +28,10 @@ class AttendanceStatsOverview extends StatsOverviewWidget
             ->whereIn('result', ['invalid', 'expired'])
             ->count();
 
+        $wrongGate = ScanLog::where('scanned_at', '>=', $since)
+            ->where('result', 'wrong_gate')
+            ->count();
+
         return [
             Stat::make('Tickets Issued', number_format($issued))
                 ->description('Last 30 days')
@@ -45,6 +49,10 @@ class AttendanceStatsOverview extends StatsOverviewWidget
                 ->description('Invalid / expired · 30d')
                 ->descriptionIcon('heroicon-o-x-circle')
                 ->color('danger'),
+            Stat::make('Wrong Gate', number_format($wrongGate))
+                ->description('Wrong ticket type · 30d')
+                ->descriptionIcon('heroicon-o-arrow-right-circle')
+                ->color('info'),
         ];
     }
 }
