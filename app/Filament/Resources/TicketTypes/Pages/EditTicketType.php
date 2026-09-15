@@ -74,6 +74,10 @@ class EditTicketType extends EditRecord
                             'timestamp' => $this->pendingBatchTimestamp,
                         ]))
                         ->openUrlInNewTab(),
+                    Action::make('viewBatches')
+                        ->label('View all batches')
+                        ->url('/admin/batches')
+                        ->openUrlInNewTab(),
                 ])
                 ->send();
 

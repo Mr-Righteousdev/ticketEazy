@@ -4,6 +4,7 @@ namespace App\Jobs;
 
 use App\Actions\GenerateTicketShortCode;
 use App\Actions\GenerateTicketToken;
+use App\Models\Batch;
 use App\Models\Ticket;
 use App\Models\TicketType;
 use chillerlan\QRCode\Common\EccLevel;
@@ -37,12 +38,21 @@ class GenerateTickets implements ShouldQueue
         $basePath = "tickets/{$eventId}/{$typeId}";
         $batchDir = "{$basePath}/batch-{$timestamp}";
 
+        $batch = Batch::create([
+            'event_id' => $eventId,
+            'ticket_type_id' => $typeId,
+            'batch_timestamp' => $timestamp,
+            'ticket_count' => 0,
+            'status' => 'generating',
+        ]);
+
         $templatePath = $ticketType->template_path
             ? Storage::disk('local')->path($ticketType->template_path)
             : null;
 
         if (! $templatePath || ! file_exists($templatePath)) {
             Log::warning("Ticket generation skipped for ticket type {$typeId}: no PDF template found.");
+            $batch->update(['status' => 'failed']);
 
             return;
         }
@@ -50,6 +60,7 @@ class GenerateTickets implements ShouldQueue
         Storage::makeDirectory($batchDir);
 
         $pdfPaths = [];
+        $generatedCount = 0;
 
         $qrOptions = new QROptions([
             'outputType' => QRCode::OUTPUT_IMAGE_PNG,
@@ -76,11 +87,14 @@ class GenerateTickets implements ShouldQueue
             try {
                 $this->stampPdf(new QRCode($qrOptions), $ticket, $templatePath, $outputPath);
                 $pdfPaths[] = $outputPath;
+                $generatedCount++;
             } catch (\Throwable $e) {
                 $ticket->update(['status' => 'failed']);
                 Log::error("Ticket {$ticket->id} PDF generation failed: ".$e->getMessage());
             }
         }
+
+        $batch->update(['ticket_count' => $generatedCount]);
 
         if (! empty($pdfPaths)) {
             $zipPath = Storage::disk('local')->path("{$basePath}/downloads");
@@ -94,8 +108,17 @@ class GenerateTickets implements ShouldQueue
                 }
                 $zip->close();
 
+                $batch->update([
+                    'status' => 'ready',
+                    'zip_path' => "{$basePath}/downloads/{$typeId}-batch-{$timestamp}.zip",
+                ]);
+
                 Log::info("Ticket batch ready for ticket type {$typeId}: {$zipFile}");
+            } else {
+                $batch->update(['status' => 'failed']);
             }
+        } else {
+            $batch->update(['status' => 'failed']);
         }
     }
 
