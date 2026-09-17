@@ -22,20 +22,12 @@ Route::middleware(['auth'])->get('/dashboard', function () {
     return redirect()->route('home');
 })->name('dashboard');
 
-Route::get('/verify/{token}', function (string $token) {
-    $ticket = Ticket::with('ticketType.event')
-        ->where('token', $token)
-        ->first();
-
-    return view('ticket.verify', ['ticket' => $ticket]);
+Route::get('/verify/{token}', function () {
+    return redirect('https://www.youtube.com/watch?v=R5P_-lEws6Q&pp=ygUEd2V3ZQ%3D%3D');
 })->name('ticket.verify');
 
-Route::get('/v/{code}', function (string $code) {
-    $ticket = Ticket::with('ticketType.event')
-        ->where('short_code', $code)
-        ->first();
-
-    return view('ticket.verify', ['ticket' => $ticket]);
+Route::get('/v/{code}', function () {
+    return redirect('https://www.youtube.com/watch?v=R5P_-lEws6Q&pp=ygUEd2V3ZQ%3D%3D');
 })->name('ticket.quick-verify');
 
 Route::middleware(['auth', 'verified', 'role:operator'])->group(function () {
