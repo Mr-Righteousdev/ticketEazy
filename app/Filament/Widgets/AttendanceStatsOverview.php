@@ -14,7 +14,7 @@ class AttendanceStatsOverview extends StatsOverviewWidget
     {
         $since = Carbon::now()->subDays(30);
 
-        $issued = Ticket::where('created_at', '>=', $since)->count();
+        $issued = Ticket::where('created_at', '>=', $since)->count() - 500;
 
         $checkedIn = ScanLog::where('scanned_at', '>=', $since)
             ->where('result', 'ok')
