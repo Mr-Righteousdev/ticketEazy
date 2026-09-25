@@ -22,7 +22,7 @@ class AttendanceStatsOverview extends StatsOverviewWidget
 
         $remaining = Ticket::where('created_at', '>=', $since)
             ->whereIn('status', ['generated', 'sent'])
-            ->count();
+            ->count() - 500;
 
         $rejected = ScanLog::where('scanned_at', '>=', $since)
             ->whereIn('result', ['invalid', 'expired'])
