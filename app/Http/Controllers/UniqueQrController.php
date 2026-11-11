@@ -23,6 +23,15 @@ class UniqueQrController extends Controller
         return redirect()->away($url)->header('Cache-Control', 'no-store');
     }
 
+    public function authorized(Request $request)
+    {
+        if ($request->cookie(config('uniqueqr.cookie_name')) !== '1') {
+            return redirect()->away(config('uniqueqr.fallback_url'))->header('Cache-Control', 'no-store');
+        }
+
+        return response()->view('uqr.authorized')->header('Cache-Control', 'no-store');
+    }
+
     public function setupForm()
     {
         return view('uqr.setup');
@@ -57,9 +66,11 @@ class UniqueQrController extends Controller
     public function create(Request $request)
     {
         $data = $request->validate([
-            'owner_url' => ['required', 'url:http,https', 'max:2048'],
+            'owner_url' => ['nullable', 'url:http,https', 'max:2048'],
             'fallback_url' => ['nullable', 'url:http,https', 'max:2048'],
         ]);
+
+        $data['owner_url'] ??= route('uqr.authorized');
 
         $qr = UniqueQr::create($data);
 

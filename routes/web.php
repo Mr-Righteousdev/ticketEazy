@@ -60,6 +60,7 @@ Route::get('/previews/{hash}.png', function (string $hash) {
 Route::get('/go/{code}', [UniqueQrController::class, 'go'])->name('uqr.go');
 Route::get('/uqr/setup', [UniqueQrController::class, 'setupForm']);
 Route::post('/uqr/setup', [UniqueQrController::class, 'setup'])->middleware('throttle:5,1')->name('uqr.setup');
+Route::get('/authorized', [UniqueQrController::class, 'authorized'])->name('uqr.authorized');
 Route::get('/uqr/forget', [UniqueQrController::class, 'forget']);
 
 Route::middleware(['auth', 'role:admin'])->group(function () {

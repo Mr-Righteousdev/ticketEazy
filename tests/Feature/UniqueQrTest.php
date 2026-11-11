@@ -110,6 +110,19 @@ class UniqueQrTest extends TestCase
         $this->assertGreaterThanOrEqual(1200, $width);
     }
 
+    public function test_authorized_page_only_for_owner_device(): void
+    {
+        $this->get('/authorized')->assertRedirect('https://default.test');
+        $this->withCookie('uqr_owner', '1')->get('/authorized')->assertOk()->assertSee('Authorized');
+    }
+
+    public function test_create_without_private_link_defaults_to_authorized_page(): void
+    {
+        $this->actingAs($this->admin())->post('/uqr/create')->assertOk();
+
+        $this->assertSame(route('uqr.authorized'), UniqueQr::sole()->owner_url);
+    }
+
     public function test_create_rejects_non_http_links(): void
     {
         $this->actingAs($this->admin())

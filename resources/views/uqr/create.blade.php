@@ -9,8 +9,8 @@
 <body style="font-family: sans-serif; max-width: 480px; margin: 4rem auto; padding: 0 1rem;">
     <form method="POST" action="{{ route('uqr.create') }}">
         @csrf
-        <label>Private link (owner's phone)<br>
-            <input type="url" name="owner_url" value="{{ old('owner_url') }}" required maxlength="2048" style="width: 100%; padding: .5rem; box-sizing: border-box;">
+        <label>Private link (owner's phone, optional)<br>
+            <input type="url" name="owner_url" value="{{ old('owner_url') }}" placeholder="{{ route('uqr.authorized') }}" maxlength="2048" style="width: 100%; padding: .5rem; box-sizing: border-box;">
         </label>
         @error('owner_url')<p style="color: #b00;">{{ $message }}</p>@enderror
         <br><br>
