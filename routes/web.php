@@ -1,7 +1,7 @@
 <?php
 
+use App\Http\Controllers\UniqueQrController;
 use App\Livewire\ScanTicket;
-use App\Models\Ticket;
 use App\Models\TicketType;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Storage;
@@ -55,5 +55,16 @@ Route::get('/previews/{hash}.png', function (string $hash) {
 
     return response()->file($path, ['Content-Type' => 'image/png']);
 })->name('previews.show');
+
+// Device-aware QR: owner phone (cookie from /uqr/setup) goes to the private link, everyone else to the fallback.
+Route::get('/go/{code}', [UniqueQrController::class, 'go'])->name('uqr.go');
+Route::get('/uqr/setup', [UniqueQrController::class, 'setupForm']);
+Route::post('/uqr/setup', [UniqueQrController::class, 'setup'])->middleware('throttle:5,1')->name('uqr.setup');
+Route::get('/uqr/forget', [UniqueQrController::class, 'forget']);
+
+Route::middleware(['auth', 'role:admin'])->group(function () {
+    Route::get('/uqr/create', [UniqueQrController::class, 'createForm']);
+    Route::post('/uqr/create', [UniqueQrController::class, 'create'])->name('uqr.create');
+});
 
 require __DIR__.'/settings.php';
